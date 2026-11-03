@@ -39,7 +39,7 @@ cluster: doctor
 	fi
 
 build:
-	docker build --platform linux/arm64 -t "$(IMAGE)" applications/incident-demo
+	docker build -t "$(IMAGE)" applications/incident-demo
 
 load: cluster build
 	kind load docker-image "$(IMAGE)" --name "$(CLUSTER_NAME)"
