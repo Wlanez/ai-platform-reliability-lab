@@ -15,6 +15,84 @@ The lab is designed around four principles:
 3. **Full observability** — every tool request, policy decision, model step, and outcome is traceable.
 4. **Reproducible evaluation** — incidents and adversarial scenarios are automated and scored.
 
+
+## Run Experiment 001 on a Mac
+
+### Prerequisites
+
+Install Docker Desktop, `kind`, and `kubectl`. Homebrew commands:
+
+```bash
+brew install kind kubectl
+```
+
+Docker Desktop must be running. Java and Maven are **not required on the Mac** because the application is built inside a multi-stage Docker image.
+
+### Start the lab
+
+```bash
+git clone https://github.com/Wlanez/ai-platform-reliability-lab.git
+cd ai-platform-reliability-lab
+
+make doctor
+make up
+```
+
+`make up` creates a local kind cluster, builds the Spring Boot service, loads the image into kind, deploys it, waits for readiness, and performs a healthy request.
+
+### Reproduce the first incidents
+
+Inject HTTP 500 responses:
+
+```bash
+make inject-failure
+make test
+```
+
+Expected result: `/api/work` returns HTTP 500 with an injected-failure payload.
+
+Restore healthy behavior and inject latency:
+
+```bash
+make reset
+make inject-latency
+make test
+```
+
+Expected result: HTTP 200 after approximately 1.5 seconds.
+
+Inspect the application:
+
+```bash
+make status
+make metrics
+make logs
+```
+
+Return to healthy mode:
+
+```bash
+make reset
+```
+
+Delete the entire local cluster:
+
+```bash
+make down
+```
+
+### Current ground truth
+
+Before an AI agent is introduced, the lab already provides deterministic known states:
+
+| Mode | Expected HTTP status | Expected behavior |
+| --- | ---: | --- |
+| `healthy` | 200 | normal response |
+| `errors` | 500 | injected application failure |
+| `latency` | 200 | about 1.5 s response time |
+
+These known states become the baseline against which the future SRE agent will be evaluated.
+
 ## MVP architecture
 
 ```text
