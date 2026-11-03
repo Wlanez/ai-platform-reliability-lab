@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 CLUSTER_NAME ?= ai-reliability-lab
 NAMESPACE ?= ai-reliability-lab
-IMAGE ?= incident-demo:0.1.0
+IMAGE ?= localhost/incident-demo:0.1.0
 APP_PORT ?= 8080
 
 # kind's Podman provider is selected through this environment variable.
