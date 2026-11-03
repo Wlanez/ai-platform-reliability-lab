@@ -47,7 +47,9 @@ build:
 	podman build -t "$(IMAGE)" applications/incident-demo
 
 load: cluster build
-	KIND_EXPERIMENTAL_PROVIDER=podman kind load docker-image "$(IMAGE)" --name "$(CLUSTER_NAME)"
+	@mkdir -p .tmp
+	podman save --format docker-archive -o .tmp/incident-demo.tar "$(IMAGE)"
+	KIND_EXPERIMENTAL_PROVIDER=podman kind load image-archive .tmp/incident-demo.tar --name "$(CLUSTER_NAME)"
 
 deploy: load
 	kubectl apply -f infrastructure/kubernetes/namespace.yaml
