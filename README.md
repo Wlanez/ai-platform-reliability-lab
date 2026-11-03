@@ -16,17 +16,27 @@ The lab is designed around four principles:
 4. **Reproducible evaluation** — incidents and adversarial scenarios are automated and scored.
 
 
-## Run Experiment 001 on a Mac
+## Run Experiment 001 on a Mac with Podman
+
+The local runtime for this lab is **Podman**, not Docker Desktop.
 
 ### Prerequisites
 
-Install Docker Desktop, `kind`, and `kubectl`. Homebrew commands:
+Install Podman, `kind`, and `kubectl`:
 
 ```bash
-brew install kind kubectl
+brew install podman kind kubectl
 ```
 
-Docker Desktop must be running. Java and Maven are **not required on the Mac** because the application is built inside a multi-stage Docker image.
+Initialize/start the Podman virtual machine:
+
+```bash
+make podman-machine
+```
+
+The default helper creates a VM with 4 CPUs, 4 GB RAM, and a 30 GB disk when no Podman machine exists. You can change those settings later if your Mac Air has tighter memory constraints.
+
+Java and Maven are **not required on the Mac**. The Spring Boot application is compiled inside a multi-stage container build.
 
 ### Start the lab
 
@@ -34,11 +44,27 @@ Docker Desktop must be running. Java and Maven are **not required on the Mac** b
 git clone https://github.com/Wlanez/ai-platform-reliability-lab.git
 cd ai-platform-reliability-lab
 
+make podman-machine
 make doctor
 make up
 ```
 
-`make up` creates a local kind cluster, builds the Spring Boot service, loads the image into kind, deploys it, waits for readiness, and performs a healthy request.
+The Makefile selects Podman for kind through:
+
+```bash
+KIND_EXPERIMENTAL_PROVIDER=podman
+```
+
+`make up`:
+
+1. checks Podman, kind, kubectl, and curl;
+2. creates the local kind cluster using Podman;
+3. builds `incident-demo:0.1.0` with `podman build`;
+4. loads that image into the kind node;
+5. creates the lab namespace;
+6. deploys the Spring Boot workload;
+7. waits for Kubernetes readiness;
+8. performs the baseline HTTP request.
 
 ### Reproduce the first incidents
 
@@ -75,11 +101,13 @@ Return to healthy mode:
 make reset
 ```
 
-Delete the entire local cluster:
+Delete the kind cluster:
 
 ```bash
 make down
 ```
+
+This removes the Kubernetes lab but leaves the Podman machine available for later runs.
 
 ### Current ground truth
 
