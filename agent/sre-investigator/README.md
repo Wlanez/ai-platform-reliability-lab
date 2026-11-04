@@ -16,10 +16,19 @@ a control test, not AI performance.
 ## Run the AI investigator
 
     make agent-bootstrap
-    export OPENAI_API_KEY=...
+    export OPENROUTER_API_KEY="sk-or-v1-..."
     make scenario-agent-http-500
 
-Override the default model with AGENT_MODEL if needed.
+The default model is `openai/gpt-6.1-terra`. Override it with `AGENT_MODEL` for
+cross-model evaluations.
+
+The default output budget is `AGENT_MAX_OUTPUT_TOKENS=2000`. It limits generated
+model output, not the evidence snapshot. This keeps diagnosis cost bounded and prevents
+very large provider defaults from causing credit failures. If a model cannot complete
+its structured diagnosis within the budget, that is visible as an evaluation/runtime
+failure. Raise it deliberately when a scenario requires more output:
+
+    AGENT_MAX_OUTPUT_TOKENS=4000 make scenario-agent-http-500
 
 ## Local artifacts
 
