@@ -3,7 +3,7 @@ package dev.avangard.lab.incidentdemo;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
-import org.springframework.http.HttpStatus;
+import org.slf4j.Logger;\nimport org.slf4j.LoggerFactory;\nimport org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -67,7 +67,7 @@ public class IncidentController {
                     .body(Map.of("error", "mode must be one of: healthy, errors, latency"));
         }
 
-        this.mode.set(mode);
+        log.info("Changing incident mode from {} to {}", this.mode.get(), mode);\n        this.mode.set(mode);
         this.modeCode.set(switch (mode) {
             case "errors" -> 1;
             case "latency" -> 2;
