@@ -60,7 +60,7 @@ Responsibilities:
 - stop when evidence is sufficient or the budget is exhausted;
 - produce a structured incident report.
 
-The agent has no direct Kubernetes credentials.
+The agent has no direct Kubernetes credentials. In the first implementation, evidence collection is deterministic and read-only: fixed Kubernetes observations, bounded logs, and an allowlist of Prometheus queries are collected before the model receives context.
 
 ### 3. Tool/MCP gateway
 
@@ -128,7 +128,7 @@ Even if the model is prompt-injected or produces a dangerous request, determinis
 
 The MVP should run locally:
 
-- Docker
+- Podman / Podman machine
 - kind
 - Kubernetes
 - Spring Boot
