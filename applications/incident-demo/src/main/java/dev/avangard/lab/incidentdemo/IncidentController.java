@@ -3,7 +3,9 @@ package dev.avangard.lab.incidentdemo;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
-import org.slf4j.Logger;\nimport org.slf4j.LoggerFactory;\nimport org.springframework.http.HttpStatus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,7 +18,9 @@ import java.util.concurrent.atomic.AtomicReference;
 @RestController
 public class IncidentController {
 
+    private static final Logger log = LoggerFactory.getLogger(IncidentController.class);
     private static final Set<String> VALID_MODES = Set.of("healthy", "errors", "latency");
+
     private final AtomicReference<String> mode = new AtomicReference<>("healthy");
     private final AtomicInteger modeCode = new AtomicInteger(0);
     private final Counter requests;
@@ -45,6 +49,7 @@ public class IncidentController {
 
         if ("errors".equals(currentMode)) {
             failures.increment();
+            log.warn("Injected HTTP 500 for EXP-001; mode={}", currentMode);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of(
                             "status", "error",
@@ -67,7 +72,8 @@ public class IncidentController {
                     .body(Map.of("error", "mode must be one of: healthy, errors, latency"));
         }
 
-        log.info("Changing incident mode from {} to {}", this.mode.get(), mode);\n        this.mode.set(mode);
+        log.info("Changing incident mode from {} to {}", this.mode.get(), mode);
+        this.mode.set(mode);
         this.modeCode.set(switch (mode) {
             case "errors" -> 1;
             case "latency" -> 2;
