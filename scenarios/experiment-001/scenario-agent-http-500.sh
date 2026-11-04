@@ -6,7 +6,7 @@ APP_PORT="${APP_PORT:-18082}"
 PROM_PORT="${PROM_PORT:-19091}"
 REQUESTS="${REQUESTS:-40}"
 AGENT_MODE="${AGENT_MODE:-openai}"
-AGENT_MODEL="${AGENT_MODEL:-gpt-6-luna}"
+AGENT_MODEL="${AGENT_MODEL:-gpt-6-luna}"\nPYTHON_BIN="${PYTHON_BIN:-python3}"
 ARTIFACT_DIR="${ARTIFACT_DIR:-artifacts/experiment-001}"
 
 EVIDENCE_FILE="$ARTIFACT_DIR/agent-evidence.json"
@@ -54,10 +54,10 @@ REQUESTS="$REQUESTS" DELAY=0.08 bash scenarios/experiment-001/traffic-generator.
 sleep 4
 
 echo "3/5 Collect read-only evidence and run investigator"
-NAMESPACE="$NAMESPACE" PROMETHEUS_URL="http://127.0.0.1:$PROM_PORT" AGENT_MODE="$AGENT_MODE" AGENT_MODEL="$AGENT_MODEL" python3 agent/sre-investigator/investigator.py   --mode "$AGENT_MODE"   --model "$AGENT_MODEL"   --evidence-out "$EVIDENCE_FILE"   --diagnosis-out "$DIAGNOSIS_FILE"
+NAMESPACE="$NAMESPACE" PROMETHEUS_URL="http://127.0.0.1:$PROM_PORT" AGENT_MODE="$AGENT_MODE" AGENT_MODEL="$AGENT_MODEL" "$PYTHON_BIN" agent/sre-investigator/investigator.py   --mode "$AGENT_MODE"   --model "$AGENT_MODEL"   --evidence-out "$EVIDENCE_FILE"   --diagnosis-out "$DIAGNOSIS_FILE"
 
 echo "4/5 Evaluate diagnosis against ground truth"
-python3 evaluations/reliability/evaluate_diagnosis.py   --diagnosis "$DIAGNOSIS_FILE"   --evidence "$EVIDENCE_FILE"   --out "$EVALUATION_FILE"
+"$PYTHON_BIN" evaluations/reliability/evaluate_diagnosis.py   --diagnosis "$DIAGNOSIS_FILE"   --evidence "$EVIDENCE_FILE"   --out "$EVALUATION_FILE"
 
 echo "5/5 Restore healthy mode"
 curl -fsS -X POST "http://127.0.0.1:$APP_PORT/admin/failure?mode=healthy" >/dev/null
