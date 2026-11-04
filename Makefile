@@ -120,8 +120,8 @@ agent-bootstrap:
 
 scenario-agent-http-500:
 	@test -x .venv/bin/python || (echo "ERROR: run 'make agent-bootstrap' first" && exit 1)
-	@test -n "$$OPENAI_API_KEY" || (echo "ERROR: OPENAI_API_KEY is required" && exit 1)
-	@AGENT_MODE=openai PYTHON_BIN=.venv/bin/python bash scenarios/experiment-001/scenario-agent-http-500.sh
+	@test -n "$OPENROUTER_API_KEY" || (echo "ERROR: OPENROUTER_API_KEY is required" && exit 1)
+	@MODEL_PROVIDER=openrouter AGENT_MODE=openai PYTHON_BIN=.venv/bin/python bash scenarios/experiment-001/scenario-agent-http-500.sh
 
 scenario-agent-http-500-baseline:
 	@command -v python3 >/dev/null || (echo "ERROR: python3 is required" && exit 1)
