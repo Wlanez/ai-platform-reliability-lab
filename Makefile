@@ -7,7 +7,7 @@ APP_PORT ?= 8080
 # kind's Podman provider is selected through this environment variable.
 export KIND_EXPERIMENTAL_PROVIDER ?= podman
 
-.PHONY: help doctor podman-machine up cluster build load deploy wait prometheus-wait status test inject-failure inject-latency reset metrics prometheus-query scenario-http-500 logs down
+.PHONY: help doctor podman-machine up cluster build load deploy wait prometheus-wait status test inject-failure inject-latency reset metrics prometheus-query scenario-http-500 agent-bootstrap scenario-agent-http-500 scenario-agent-http-500-baseline logs down
 
 help:
 	@echo "AI Platform Reliability & Security Lab"
