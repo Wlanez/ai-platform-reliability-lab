@@ -64,7 +64,8 @@ KIND_EXPERIMENTAL_PROVIDER=podman
 5. creates the lab namespace;
 6. deploys the Spring Boot workload;
 7. waits for Kubernetes readiness;
-8. performs the baseline HTTP request.
+8. deploys Prometheus and waits for it to become ready;
+9. performs the baseline HTTP request.
 
 ### Reproduce the first incidents
 
@@ -108,6 +109,35 @@ make down
 ```
 
 This removes the Kubernetes lab but leaves the Podman machine available for later runs.
+
+### Automated HTTP 500 scenario
+
+After the lab is up, run:
+
+```bash
+make scenario-http-500
+```
+
+The scenario:
+
+1. verifies that Prometheus can scrape `incident-demo`;
+2. resets the application to healthy mode;
+3. generates a small healthy baseline;
+4. snapshots Prometheus request/failure counters;
+5. switches the application to HTTP 500 mode;
+6. generates deterministic incident traffic;
+7. waits for Prometheus to scrape the new values;
+8. computes counter deltas and the observed error rate;
+9. writes a machine-readable PASS/FAIL result to `artifacts/experiment-001/http-500-result.json`;
+10. restores the application to healthy mode.
+
+The default PASS condition requires an observed error rate of at least 90%, the injected mode metric to equal `1`, and the Prometheus target to remain up.
+
+Inspect Prometheus directly with:
+
+```bash
+make prometheus-query
+```
 
 ### Current ground truth
 
@@ -260,6 +290,8 @@ This repository is intended to make those properties testable.
 
 ## Status
 
-**Stage:** bootstrap / Experiment 001 design.
+**Stage:** Experiment 001 observable-failure baseline.
 
-Next milestone: a local Kubernetes cluster running a deliberately fault-injectable demo service with observable metrics.
+Current milestone: Podman + kind + Spring Boot + in-cluster Prometheus + deterministic HTTP 500 scenario with machine-readable evaluation.
+
+Next milestone: add the first read-only SRE investigator and compare its diagnosis against this ground truth.
