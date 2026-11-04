@@ -7,7 +7,7 @@ APP_PORT ?= 8080
 # kind's Podman provider is selected through this environment variable.
 export KIND_EXPERIMENTAL_PROVIDER ?= podman
 
-.PHONY: help doctor podman-machine up cluster build load deploy wait status test inject-failure inject-latency reset metrics logs down
+.PHONY: help doctor podman-machine up cluster build load deploy wait prometheus-wait status test inject-failure inject-latency reset metrics prometheus-query scenario-http-500 logs down
 
 help:
 	@echo "AI Platform Reliability & Security Lab"
@@ -21,6 +21,8 @@ help:
 	@echo "make inject-latency  Switch app to 1500ms latency mode"
 	@echo "make reset           Return app to healthy mode"
 	@echo "make metrics         Show selected Prometheus-format app metrics"
+	@echo "make prometheus-query Query Prometheus target and application counters"
+	@echo "make scenario-http-500 Run automated EXP-001 HTTP 500 evaluation"
 	@echo "make logs            Tail application logs"
 	@echo "make down            Delete the local kind cluster"
 
@@ -54,9 +56,14 @@ load: cluster build
 deploy: load
 	kubectl apply -f infrastructure/kubernetes/namespace.yaml
 	kubectl apply -f infrastructure/kubernetes/incident-demo.yaml
+	kubectl apply -f infrastructure/kubernetes/prometheus.yaml
 
 wait:
 	kubectl -n "$(NAMESPACE)" rollout status deployment/incident-demo --timeout=180s
+	kubectl -n "$(NAMESPACE)" rollout status deployment/prometheus --timeout=180s
+
+prometheus-wait:
+	kubectl -n "$(NAMESPACE)" rollout status deployment/prometheus --timeout=180s
 
 up: deploy wait
 	@$(MAKE) test
@@ -84,6 +91,22 @@ reset:
 
 _set-mode:
 	@set -euo pipefail; 	kubectl -n "$(NAMESPACE)" port-forward svc/incident-demo $(APP_PORT):8080 >/tmp/ai-lab-port-forward.log 2>&1 & PF_PID=$$!; 	trap 'kill $$PF_PID >/dev/null 2>&1 || true' EXIT; 	for i in {1..30}; do curl -fsS http://127.0.0.1:$(APP_PORT)/actuator/health >/dev/null 2>&1 && break; sleep 0.5; done; 	echo "Setting failure mode to $(MODE)"; 	curl -fsS -X POST "http://127.0.0.1:$(APP_PORT)/admin/failure?mode=$(MODE)"; echo
+
+prometheus-query:
+	@set -euo pipefail; \
+	kubectl -n "$(NAMESPACE)" port-forward svc/prometheus 19090:9090 >/tmp/ai-lab-prometheus-pf.log 2>&1 & PF_PID=$!; \
+	trap 'kill $PF_PID >/dev/null 2>&1 || true' EXIT; \
+	for i in {1..30}; do curl -fsS http://127.0.0.1:19090/-/ready >/dev/null 2>&1 && break; sleep 0.5; done; \
+	echo "Prometheus target:"; \
+	curl -fsSG http://127.0.0.1:19090/api/v1/query --data-urlencode 'query=up{job="incident-demo"}'; echo; \
+	echo "Request counter:"; \
+	curl -fsSG http://127.0.0.1:19090/api/v1/query --data-urlencode 'query=sum(incident_demo_requests_total{application="incident-demo"})'; echo; \
+	echo "Failure counter:"; \
+	curl -fsSG http://127.0.0.1:19090/api/v1/query --data-urlencode 'query=sum(incident_demo_failures_total{application="incident-demo"})'; echo
+
+scenario-http-500:
+	@command -v python3 >/dev/null || (echo "ERROR: python3 is required for scenario evaluation" && exit 1)
+	@bash scenarios/experiment-001/scenario-http-500.sh
 
 metrics:
 	@set -euo pipefail; 	kubectl -n "$(NAMESPACE)" port-forward svc/incident-demo $(APP_PORT):8080 >/tmp/ai-lab-port-forward.log 2>&1 & PF_PID=$$!; 	trap 'kill $$PF_PID >/dev/null 2>&1 || true' EXIT; 	for i in {1..30}; do curl -fsS http://127.0.0.1:$(APP_PORT)/actuator/health >/dev/null 2>&1 && break; sleep 0.5; done; 	curl -fsS http://127.0.0.1:$(APP_PORT)/actuator/prometheus | 		grep -E '^(incident_demo_requests_total|incident_demo_failures_total|incident_demo_mode|http_server_requests_seconds)' || true
