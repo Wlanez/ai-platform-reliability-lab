@@ -146,10 +146,12 @@ def model_diagnosis(evidence: dict, model: str) -> dict:
     else:
         raise RuntimeError(f"Unsupported MODEL_PROVIDER: {provider}")
     prompt = "Investigate this incident using only the evidence snapshot below.\n\n" + json.dumps(evidence, indent=2)
+    max_output_tokens = int(os.environ.get("AGENT_MAX_OUTPUT_TOKENS", "2000"))
     response = client.responses.create(
         model=model,
         instructions=SYSTEM_PROMPT,
         input=prompt,
+        max_output_tokens=max_output_tokens,
     )
     return _extract_json(response.output_text)
 
@@ -170,6 +172,7 @@ def main() -> int:
         "agent_mode": args.mode,
         "provider": os.environ.get("MODEL_PROVIDER", "openrouter") if args.mode == "openai" else "deterministic-control",
         "model": args.model if args.mode == "openai" else "deterministic-control",
+        "max_output_tokens": int(os.environ.get("AGENT_MAX_OUTPUT_TOKENS", "2000")) if args.mode == "openai" else 0,
         "evidence_file": args.evidence_out,
     }
     Path(args.diagnosis_out).write_text(json.dumps(diagnosis, indent=2) + "\n", encoding="utf-8")
