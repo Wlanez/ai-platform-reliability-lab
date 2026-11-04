@@ -158,7 +158,7 @@ def model_diagnosis(evidence: dict, model: str) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode", choices=["openai", "baseline"], default=os.environ.get("AGENT_MODE", "openai"))
-    parser.add_argument("--model", default=os.environ.get("AGENT_MODEL", "openai/gpt-6.1-sol"))
+    parser.add_argument("--model", default=os.environ.get("AGENT_MODEL", "openai/gpt-6.1-terra"))
     parser.add_argument("--evidence-out", required=True)
     parser.add_argument("--diagnosis-out", required=True)
     args = parser.parse_args()
