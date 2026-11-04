@@ -162,11 +162,37 @@ Validate the evidence/evaluator harness without a model call:
 
     make scenario-agent-http-500-baseline
 
-Then run the AI investigator:
+Then run the AI investigator through OpenRouter:
 
     make agent-bootstrap
-    export OPENAI_API_KEY=...
+    export OPENROUTER_API_KEY="sk-or-v1-..."
     make scenario-agent-http-500
+
+The default model is `openai/gpt-6.1-terra`. Override it for comparative evaluations:
+
+    AGENT_MODEL="anthropic/<model-slug>" make scenario-agent-http-500
+
+### Model output budget
+
+AI diagnosis requests enforce `AGENT_MAX_OUTPUT_TOKENS=2000` by default. This is a
+cost and reliability guardrail: it prevents a provider/model default from reserving an
+unnecessarily large completion budget (for example, 65,536 tokens) for a diagnosis that
+should produce a compact structured JSON result.
+
+This limit applies to generated output, not to the Kubernetes/Prometheus/log evidence
+collected by the read-only tools. For EXP-001, 2,000 output tokens should be ample for
+the classification, grounded evidence, alternatives, confidence, and recommended next
+diagnostic action. A model that uses output budget for internal reasoning, or a future
+scenario requiring a substantially longer report, may exhaust the budget and return an
+incomplete response. That should be treated as a measurable evaluation failure rather
+than silently granting an unlimited budget.
+
+The budget can be raised explicitly for an experiment:
+
+    AGENT_MAX_OUTPUT_TOKENS=4000 make scenario-agent-http-500
+
+Keep the chosen budget with the experiment results so model quality, latency, and cost
+can later be compared under equivalent constraints.
 
 The run writes three git-ignored artifacts under artifacts/experiment-001/:
 agent-evidence.json, agent-diagnosis.json, and agent-evaluation.json.
@@ -312,7 +338,7 @@ This repository is intended to make those properties testable.
 
 ## Status
 
-**Stage:** Experiment 001 observable-failure baseline.
+**Stage:** Experiment 001 read-only AI SRE investigator.
 
 Current milestone: Podman + kind + Spring Boot + in-cluster Prometheus + deterministic HTTP 500 scenario with machine-readable evaluation.
 
