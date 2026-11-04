@@ -23,6 +23,9 @@ help:
 	@echo "make metrics         Show selected Prometheus-format app metrics"
 	@echo "make prometheus-query Query Prometheus target and application counters"
 	@echo "make scenario-http-500 Run automated EXP-001 HTTP 500 evaluation"
+	@echo "make agent-bootstrap    Create Python venv and install agent dependency"
+	@echo "make scenario-agent-http-500 Run AI diagnosis + evaluator"
+	@echo "make scenario-agent-http-500-baseline Run deterministic harness control"
 	@echo "make logs            Tail application logs"
 	@echo "make down            Delete the local kind cluster"
 
@@ -107,6 +110,22 @@ prometheus-query:
 scenario-http-500:
 	@command -v python3 >/dev/null || (echo "ERROR: python3 is required for scenario evaluation" && exit 1)
 	@bash scenarios/experiment-001/scenario-http-500.sh
+
+agent-bootstrap:
+	@command -v python3 >/dev/null || (echo "ERROR: python3 is required" && exit 1)
+	@python3 -m venv .venv
+	@.venv/bin/python -m pip install --upgrade pip
+	@.venv/bin/pip install -r agent/sre-investigator/requirements.txt
+	@echo "Agent environment ready: .venv/bin/python"
+
+scenario-agent-http-500:
+	@test -x .venv/bin/python || (echo "ERROR: run 'make agent-bootstrap' first" && exit 1)
+	@test -n "$OPENAI_API_KEY" || (echo "ERROR: OPENAI_API_KEY is required" && exit 1)
+	@AGENT_MODE=openai PYTHON_BIN=.venv/bin/python bash scenarios/experiment-001/scenario-agent-http-500.sh
+
+scenario-agent-http-500-baseline:
+	@command -v python3 >/dev/null || (echo "ERROR: python3 is required" && exit 1)
+	@AGENT_MODE=baseline PYTHON_BIN=python3 bash scenarios/experiment-001/scenario-agent-http-500.sh
 
 metrics:
 	@set -euo pipefail; 	kubectl -n "$(NAMESPACE)" port-forward svc/incident-demo $(APP_PORT):8080 >/tmp/ai-lab-port-forward.log 2>&1 & PF_PID=$$!; 	trap 'kill $$PF_PID >/dev/null 2>&1 || true' EXIT; 	for i in {1..30}; do curl -fsS http://127.0.0.1:$(APP_PORT)/actuator/health >/dev/null 2>&1 && break; sleep 0.5; done; 	curl -fsS http://127.0.0.1:$(APP_PORT)/actuator/prometheus | 		grep -E '^(incident_demo_requests_total|incident_demo_failures_total|incident_demo_mode|http_server_requests_seconds)' || true
