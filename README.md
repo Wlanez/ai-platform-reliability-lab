@@ -151,6 +151,28 @@ Before an AI agent is introduced, the lab already provides deterministic known s
 
 These known states become the baseline against which the future SRE agent will be evaluated.
 
+## First SRE investigator
+
+Experiment 001 now includes a constrained diagnostic agent. The model does not receive a shell,
+Kubernetes credentials, arbitrary kubectl commands, arbitrary PromQL, or write-capable tools.
+A deterministic evidence adapter collects namespace-scoped workload state, recent events,
+bounded logs, and approved Prometheus observations.
+
+Validate the evidence/evaluator harness without a model call:
+
+    make scenario-agent-http-500-baseline
+
+Then run the AI investigator:
+
+    make agent-bootstrap
+    export OPENAI_API_KEY=...
+    make scenario-agent-http-500
+
+The run writes three git-ignored artifacts under artifacts/experiment-001/:
+agent-evidence.json, agent-diagnosis.json, and agent-evaluation.json.
+
+The deterministic baseline is only a control for the harness; it is not counted as AI performance.
+
 ## MVP architecture
 
 ```text
