@@ -47,10 +47,10 @@ Requirements:
 
 def _extract_json(text: str) -> dict:
     text = text.strip()
-    if text.startswith("~~~"):
+    if text.startswith("~~~") or text.startswith("```"):
         lines = text.splitlines()
         lines = lines[1:]
-        if lines and lines[-1].strip() == "~~~":
+        if lines and lines[-1].strip() in {"~~~", "```"}:
             lines = lines[:-1]
         text = "\n".join(lines).strip()
     start = text.find("{")
