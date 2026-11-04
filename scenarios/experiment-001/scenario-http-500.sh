@@ -16,6 +16,9 @@ PROM_PF_PID=""
 
 cleanup() {
   [[ -n "$APP_PF_PID" ]] && kill "$APP_PF_PID" >/dev/null 2>&1 || true
+  if [[ -n "$APP_PF_PID" ]]; then
+    curl -fsS -X POST "http://127.0.0.1:$APP_PORT/admin/failure?mode=healthy" >/dev/null 2>&1 || true
+  fi
   [[ -n "$PROM_PF_PID" ]] && kill "$PROM_PF_PID" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
@@ -60,7 +63,7 @@ curl -fsS -X POST "http://127.0.0.1:$APP_PORT/admin/failure?mode=healthy" >/dev/
 sleep 3
 
 echo "3/6 Generate healthy baseline traffic"
-REQUESTS=10 DELAY=0.05 ./scenarios/experiment-001/traffic-generator.sh   "http://127.0.0.1:$APP_PORT/api/work"
+REQUESTS=10 DELAY=0.05 bash scenarios/experiment-001/traffic-generator.sh   "http://127.0.0.1:$APP_PORT/api/work"
 sleep 3
 
 before_requests="$(query_prometheus 'sum(incident_demo_requests_total{application="incident-demo"})')"
@@ -72,7 +75,7 @@ echo "4/6 Inject HTTP 500 failure"
 curl -fsS -X POST "http://127.0.0.1:$APP_PORT/admin/failure?mode=errors" >/dev/null
 
 echo "5/6 Generate incident traffic"
-REQUESTS="$REQUESTS" DELAY=0.10 ./scenarios/experiment-001/traffic-generator.sh   "http://127.0.0.1:$APP_PORT/api/work"
+REQUESTS="$REQUESTS" DELAY=0.10 bash scenarios/experiment-001/traffic-generator.sh   "http://127.0.0.1:$APP_PORT/api/work"
 sleep 4
 
 after_requests="$(query_prometheus 'sum(incident_demo_requests_total{application="incident-demo"})')"
@@ -134,6 +137,6 @@ print(json.dumps(result, indent=2))
 sys.exit(0 if passed else 1)
 PY
 
-# Always restore healthy mode after a successful evaluation.
 curl -fsS -X POST "http://127.0.0.1:$APP_PORT/admin/failure?mode=healthy" >/dev/null
+echo "Application restored to healthy mode."
 echo "Result written to $RESULT_FILE"
