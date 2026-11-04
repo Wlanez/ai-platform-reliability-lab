@@ -15,11 +15,17 @@ APP_PF_PID=""
 PROM_PF_PID=""
 
 cleanup() {
-  [[ -n "$APP_PF_PID" ]] && kill "$APP_PF_PID" >/dev/null 2>&1 || true
+  if [[ -n "$APP_PF_PID" ]]; then
+    kill "$APP_PF_PID" >/dev/null 2>&1 || true
+    wait "$APP_PF_PID" 2>/dev/null || true
+  fi
   if [[ -n "$APP_PF_PID" ]]; then
     curl -fsS -X POST "http://127.0.0.1:$APP_PORT/admin/failure?mode=healthy" >/dev/null 2>&1 || true
   fi
-  [[ -n "$PROM_PF_PID" ]] && kill "$PROM_PF_PID" >/dev/null 2>&1 || true
+  if [[ -n "$PROM_PF_PID" ]]; then
+    kill "$PROM_PF_PID" >/dev/null 2>&1 || true
+    wait "$PROM_PF_PID" 2>/dev/null || true
+  fi
 }
 trap cleanup EXIT
 
