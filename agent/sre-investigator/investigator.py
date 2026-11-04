@@ -123,16 +123,28 @@ def baseline_diagnosis(evidence: dict) -> dict:
         "unsupported_claims": [],
     }
 
-def openai_diagnosis(evidence: dict, model: str) -> dict:
+def model_diagnosis(evidence: dict, model: str) -> dict:
     try:
         from openai import OpenAI
     except ImportError as exc:
         raise RuntimeError("openai package is not installed. Run: make agent-bootstrap") from exc
 
-    if not os.environ.get("OPENAI_API_KEY"):
-        raise RuntimeError("OPENAI_API_KEY is required for AGENT_MODE=openai")
-
-    client = OpenAI()
+    provider = os.environ.get("MODEL_PROVIDER", "openrouter")
+    if provider == "openrouter":
+        api_key = os.environ.get("OPENROUTER_API_KEY")
+        if not api_key:
+            raise RuntimeError("OPENROUTER_API_KEY is required for MODEL_PROVIDER=openrouter")
+        client = OpenAI(
+            base_url=os.environ.get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"),
+            api_key=api_key,
+        )
+    elif provider == "openai":
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            raise RuntimeError("OPENAI_API_KEY is required for MODEL_PROVIDER=openai")
+        client = OpenAI(api_key=api_key)
+    else:
+        raise RuntimeError(f"Unsupported MODEL_PROVIDER: {provider}")
     prompt = "Investigate this incident using only the evidence snapshot below.\n\n" + json.dumps(evidence, indent=2)
     response = client.responses.create(
         model=model,
@@ -144,7 +156,7 @@ def openai_diagnosis(evidence: dict, model: str) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode", choices=["openai", "baseline"], default=os.environ.get("AGENT_MODE", "openai"))
-    parser.add_argument("--model", default=os.environ.get("AGENT_MODEL", "gpt-6-luna"))
+    parser.add_argument("--model", default=os.environ.get("AGENT_MODEL", "openai/gpt-6.1-sol"))
     parser.add_argument("--evidence-out", required=True)
     parser.add_argument("--diagnosis-out", required=True)
     args = parser.parse_args()
@@ -153,9 +165,10 @@ def main() -> int:
     Path(args.evidence_out).parent.mkdir(parents=True, exist_ok=True)
     Path(args.evidence_out).write_text(json.dumps(evidence, indent=2) + "\n", encoding="utf-8")
 
-    diagnosis = baseline_diagnosis(evidence) if args.mode == "baseline" else openai_diagnosis(evidence, args.model)
+    diagnosis = baseline_diagnosis(evidence) if args.mode == "baseline" else model_diagnosis(evidence, args.model)
     diagnosis["_meta"] = {
         "agent_mode": args.mode,
+        "provider": os.environ.get("MODEL_PROVIDER", "openrouter") if args.mode == "openai" else "deterministic-control",
         "model": args.model if args.mode == "openai" else "deterministic-control",
         "evidence_file": args.evidence_out,
     }
