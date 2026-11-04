@@ -6,7 +6,8 @@ APP_PORT="${APP_PORT:-18082}"
 PROM_PORT="${PROM_PORT:-19091}"
 REQUESTS="${REQUESTS:-40}"
 AGENT_MODE="${AGENT_MODE:-openai}"
-AGENT_MODEL="${AGENT_MODEL:-gpt-6-luna}"
+AGENT_MODEL="${AGENT_MODEL:-openai/gpt-6.1-sol}"
+MODEL_PROVIDER="${MODEL_PROVIDER:-openrouter}"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 ARTIFACT_DIR="${ARTIFACT_DIR:-artifacts/experiment-001}"
 
@@ -55,7 +56,7 @@ REQUESTS="$REQUESTS" DELAY=0.08 bash scenarios/experiment-001/traffic-generator.
 sleep 4
 
 echo "3/5 Collect read-only evidence and run investigator"
-NAMESPACE="$NAMESPACE" PROMETHEUS_URL="http://127.0.0.1:$PROM_PORT" AGENT_MODE="$AGENT_MODE" AGENT_MODEL="$AGENT_MODEL" "$PYTHON_BIN" agent/sre-investigator/investigator.py   --mode "$AGENT_MODE"   --model "$AGENT_MODEL"   --evidence-out "$EVIDENCE_FILE"   --diagnosis-out "$DIAGNOSIS_FILE"
+NAMESPACE="$NAMESPACE" PROMETHEUS_URL="http://127.0.0.1:$PROM_PORT" AGENT_MODE="$AGENT_MODE" AGENT_MODEL="$AGENT_MODEL" MODEL_PROVIDER="$MODEL_PROVIDER" "$PYTHON_BIN" agent/sre-investigator/investigator.py   --mode "$AGENT_MODE"   --model "$AGENT_MODEL"   --evidence-out "$EVIDENCE_FILE"   --diagnosis-out "$DIAGNOSIS_FILE"
 
 echo "4/5 Evaluate diagnosis against ground truth"
 "$PYTHON_BIN" evaluations/reliability/evaluate_diagnosis.py   --diagnosis "$DIAGNOSIS_FILE"   --evidence "$EVIDENCE_FILE"   --out "$EVALUATION_FILE"
