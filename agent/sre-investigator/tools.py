@@ -167,4 +167,13 @@ def collect_evidence() -> dict[str, Any]:
         for name in PROMQL
     }
     evidence["tool_calls"] = tool_calls
+    evidence["evidence_catalog"] = {
+        "kubernetes.workload_state": evidence["workload"],
+        "kubernetes.events": evidence["events"],
+        "kubernetes.logs": evidence["logs"],
+        **{
+            f"prometheus.{name}": value
+            for name, value in evidence["prometheus"].items()
+        },
+    }
     return evidence
