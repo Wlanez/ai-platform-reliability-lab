@@ -17,6 +17,9 @@ from typing import Any
 NAMESPACE = os.environ.get("NAMESPACE", "ai-reliability-lab")
 PROMETHEUS_URL = os.environ.get("PROMETHEUS_URL", "http://127.0.0.1:19091")
 LOG_TAIL_LINES = int(os.environ.get("LOG_TAIL_LINES", "80"))
+KUBERNETES_SERVICE_ACCOUNT = os.environ.get("KUBERNETES_SERVICE_ACCOUNT", "sre-investigator")
+KUBERNETES_TOKEN = os.environ.get("KUBERNETES_TOKEN")
+KUBERNETES_IDENTITY = f"system:serviceaccount:{NAMESPACE}:{KUBERNETES_SERVICE_ACCOUNT}"
 
 PROMQL = {
     "target_up": 'up{job="incident-demo"}',
@@ -40,8 +43,15 @@ def _run(argv: list[str]) -> str:
     except subprocess.TimeoutExpired as exc:
         raise ToolError(f"read-only tool timed out: {argv[0]}") from exc
 
+def _kubectl_argv(args: list[str]) -> list[str]:
+    if not KUBERNETES_TOKEN:
+        raise ToolError(
+            "KUBERNETES_TOKEN is required; refusing to fall back to the user's kubeconfig identity"
+        )
+    return ["kubectl", f"--token={KUBERNETES_TOKEN}", "-n", NAMESPACE, *args]
+
 def _kubectl_json(args: list[str]) -> Any:
-    raw = _run(["kubectl", "-n", NAMESPACE, *args, "-o", "json"])
+    raw = _run(_kubectl_argv([*args, "-o", "json"]))
     return json.loads(raw)
 
 def get_workload_state() -> dict[str, Any]:
@@ -88,10 +98,9 @@ def get_events() -> list[dict[str, Any]]:
     return rows
 
 def get_logs() -> dict[str, Any]:
-    text = _run([
-        "kubectl", "-n", NAMESPACE, "logs", "deployment/incident-demo",
-        "--tail", str(LOG_TAIL_LINES),
-    ])
+    text = _run(_kubectl_argv([
+        "logs", "deployment/incident-demo", "--tail", str(LOG_TAIL_LINES),
+    ]))
     return {"tail_lines": LOG_TAIL_LINES, "text": text[-12000:]}
 
 def query_prometheus(query_name: str) -> dict[str, Any]:
@@ -133,6 +142,7 @@ def collect_evidence() -> dict[str, Any]:
         tool_calls.append({
             "tool": tool,
             "scope": NAMESPACE if tool.startswith("kubernetes") else "incident-demo",
+            "execution_identity": KUBERNETES_IDENTITY if tool.startswith("kubernetes") else "prometheus-http",
             "read_only": True,
             "status": status,
             "error": error,
@@ -143,6 +153,11 @@ def collect_evidence() -> dict[str, Any]:
 
     evidence = {
         "collected_at": datetime.now(timezone.utc).isoformat(),
+        "execution_identity": {
+            "principal": KUBERNETES_IDENTITY,
+            "credential_source": "short-lived-service-account-token",
+            "fallback_to_user_kubeconfig": False,
+        },
         "policy": {
             "namespace": NAMESPACE,
             "read_only": True,
