@@ -228,11 +228,31 @@ The automated check uses `kubectl auth can-i --as=system:serviceaccount:...` and
 the expected reads to return `yes` while Secrets, writes, exec, namespace escape, and
 node access return `no`.
 
-Important: SEC-001 proves the Kubernetes authorization policy for the dedicated identity.
-The current host-side evidence collector still invokes `kubectl` through the user's
-active kubeconfig. The next security step is to make the execution adapter authenticate
-as this ServiceAccount (or run in-cluster under it), so the tested RBAC boundary is also
-the identity used for actual evidence collection.
+### SEC-002 — Actual least-privilege execution identity
+
+The host-side scenario mints a short-lived Kubernetes token for the `sre-investigator`
+ServiceAccount and passes it only to the deterministic evidence adapter. Every Kubernetes
+read performed by the adapter supplies that token explicitly. The adapter fails closed if
+the token is absent; it does not fall back to the user's kubeconfig identity.
+
+The token is not included in the evidence snapshot or model prompt. Artifacts record only
+the non-secret principal name and credential mode.
+
+Verify the real credential with:
+
+    make sec-002
+
+Then rerun the complete diagnosis:
+
+    make scenario-agent-http-500
+
+A successful run demonstrates that the evidence used by the AI diagnosis was collected
+through the same least-privilege ServiceAccount whose denied capabilities are tested by
+SEC-001/SEC-002.
+
+For this local lab, the trusted test runner still uses the operator kubeconfig to mint the
+short-lived ServiceAccount token and to perform scenario setup such as failure injection
+and port-forwarding. Those operator actions are outside the AI investigator boundary.
 
 ## MVP architecture
 
@@ -375,6 +395,6 @@ This repository is intended to make those properties testable.
 
 **Stage:** Experiment 001 read-only AI SRE investigator.
 
-Current milestone: read-only Terra diagnosis passes EVAL-002, with a dedicated least-privilege Kubernetes ServiceAccount/Role/RoleBinding added for SEC-001.
+Current milestone: EVAL-002 and SEC-001 pass; the evidence adapter now executes Kubernetes reads with a short-lived `sre-investigator` ServiceAccount token and fails closed without it.
 
-Next milestone: bind actual evidence collection to the SEC-001 ServiceAccount identity, then add adversarial authorization tests and gateway audit decisions.
+Next milestone: validate SEC-002 end-to-end, then add adversarial authorization tests and structured gateway policy/audit decisions.
