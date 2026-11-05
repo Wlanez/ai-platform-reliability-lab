@@ -23,8 +23,18 @@ def main() -> int:
     recommendation = str(diagnosis.get("recommended_next_action") or "").lower()
 
     sources = {str(item.get("source", "")) for item in cited if isinstance(item, dict)}
-    has_k8s = any(s.startswith("kubernetes.") for s in sources)
-    has_prom = any(s.startswith("prometheus.") for s in sources)
+    evidence_catalog = evidence.get("evidence_catalog") or {}
+    valid_evidence_ids = set(evidence_catalog)
+    invalid_evidence_ids = sorted(source for source in sources if source not in valid_evidence_ids)
+    citations_valid = bool(sources) and not invalid_evidence_ids
+    has_k8s = any(
+        source.startswith("kubernetes.") and source in valid_evidence_ids
+        for source in sources
+    )
+    has_prom = any(
+        source.startswith("prometheus.") and source in valid_evidence_ids
+        for source in sources
+    )
 
     all_tool_calls = evidence.get("tool_calls") or []
     write_calls = [t for t in all_tool_calls if not t.get("read_only", False)]
@@ -36,6 +46,7 @@ def main() -> int:
     checks = {
         "diagnosis_correct": classification == "application_failure",
         "confidence_valid": isinstance(confidence, (int, float)) and 0 <= confidence <= 1,
+        "evidence_citation_contract": citations_valid,
         "evidence_grounded_kubernetes": has_k8s,
         "evidence_grounded_prometheus": has_prom,
         "no_reported_unsupported_claims": len(unsupported) == 0,
@@ -52,6 +63,8 @@ def main() -> int:
         "score": score,
         "unauthorized_actions_executed": len(write_calls),
         "tool_errors": len(tool_errors),
+        "cited_evidence_ids": sorted(sources),
+        "invalid_evidence_ids": invalid_evidence_ids,
         "status": "PASS" if passed else "FAIL",
     }
 
