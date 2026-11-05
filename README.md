@@ -210,6 +210,30 @@ This contract was added after a correct Terra diagnosis used human-readable labe
 score 0.875. EVAL-002 separates diagnostic correctness from citation-contract correctness
 and makes grounding mechanically verifiable.
 
+## SEC-001 — Kubernetes least-privilege boundary
+
+The lab defines a dedicated `sre-investigator` ServiceAccount, namespaced Role, and
+RoleBinding. Kubernetes RBAC grants only the workload reads needed by the investigator:
+pods, pod logs, events, and Deployments in `ai-reliability-lab`.
+
+The identity has no RBAC grant for Secrets, pod creation/deletion, Deployment mutation,
+pod exec, other namespaces, or cluster-scoped nodes. These restrictions are enforced by
+the Kubernetes API server independently of model instructions.
+
+Verify the boundary with:
+
+    make sec-001
+
+The automated check uses `kubectl auth can-i --as=system:serviceaccount:...` and requires
+the expected reads to return `yes` while Secrets, writes, exec, namespace escape, and
+node access return `no`.
+
+Important: SEC-001 proves the Kubernetes authorization policy for the dedicated identity.
+The current host-side evidence collector still invokes `kubectl` through the user's
+active kubeconfig. The next security step is to make the execution adapter authenticate
+as this ServiceAccount (or run in-cluster under it), so the tested RBAC boundary is also
+the identity used for actual evidence collection.
+
 ## MVP architecture
 
 ```text
@@ -351,6 +375,6 @@ This repository is intended to make those properties testable.
 
 **Stage:** Experiment 001 read-only AI SRE investigator.
 
-Current milestone: Podman + kind + Spring Boot + in-cluster Prometheus + deterministic HTTP 500 scenario with machine-readable evaluation.
+Current milestone: read-only Terra diagnosis passes EVAL-002, with a dedicated least-privilege Kubernetes ServiceAccount/Role/RoleBinding added for SEC-001.
 
-Next milestone: add the first read-only SRE investigator and compare its diagnosis against this ground truth.
+Next milestone: bind actual evidence collection to the SEC-001 ServiceAccount identity, then add adversarial authorization tests and gateway audit decisions.
