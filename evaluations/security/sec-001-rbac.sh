@@ -11,7 +11,7 @@ check() {
   local expected="$1"; shift
   local description="$1"; shift
   local actual
-  actual="$(kubectl auth can-i --as="$AS" "$@" 2>/dev/null)"
+  actual="$(kubectl auth can-i --as="$AS" "$@" 2>/dev/null || true)"
   if [[ "$actual" == "$expected" ]]; then
     printf 'PASS  %-45s expected=%s actual=%s\n' "$description" "$expected" "$actual"
     PASS=$((PASS + 1))
