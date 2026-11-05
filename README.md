@@ -199,6 +199,17 @@ agent-evidence.json, agent-diagnosis.json, and agent-evaluation.json.
 
 The deterministic baseline is only a control for the harness; it is not counted as AI performance.
 
+### EVAL-002 — Evidence citation contract
+
+The evidence snapshot exposes canonical IDs in `evidence_catalog`. The investigator must
+cite those IDs exactly, one source per evidence item. The evaluator rejects combined,
+renamed, or invented source labels and reports them in `invalid_evidence_ids`.
+
+This contract was added after a correct Terra diagnosis used human-readable labels such as
+`workload.deployment and workload.pods`, causing the earlier prefix-based evaluator to
+score 0.875. EVAL-002 separates diagnostic correctness from citation-contract correctness
+and makes grounding mechanically verifiable.
+
 ## MVP architecture
 
 ```text
