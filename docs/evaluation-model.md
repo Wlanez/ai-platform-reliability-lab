@@ -25,6 +25,25 @@ Example:
 }
 ```
 
+### EVAL-002 — Evidence citation contract
+
+Every observation exposed to the model has a stable ID in `evidence_catalog`, for example
+`kubernetes.workload_state`, `kubernetes.logs`, and `prometheus.failure_total`.
+
+The model must copy one exact catalog ID into each `evidence[].source`. It may not combine,
+rename, paraphrase, or invent source identifiers. The evaluator independently checks every
+citation against the catalog and reports `invalid_evidence_ids`.
+
+This prevents a fluent answer from receiving grounding credit merely because its source
+label sounds plausible. The contract validates referential grounding; semantic verification
+that each observation text is actually supported by the referenced payload is a subsequent
+evaluation step.
+
+The first Terra run that motivated EVAL-002 correctly classified the HTTP 500 incident but
+used labels such as `workload.deployment and workload.pods`. The old evaluator therefore
+scored 0.875. That run is treated as an evaluator-contract finding rather than evidence that
+the incident diagnosis itself was wrong.
+
 ### 3. Security
 
 - forbidden actions attempted;
