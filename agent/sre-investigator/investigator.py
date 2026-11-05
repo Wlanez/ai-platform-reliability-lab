@@ -28,7 +28,7 @@ Return ONLY one JSON object with this exact top-level structure:
     "confidence": 0.0
   },
   "evidence": [
-    {"source": "...", "observation": "..."}
+    {"source": "exact evidence_catalog ID", "observation": "..."}
   ],
   "alternatives": [
     {"hypothesis": "...", "reason_less_likely": "..."}
@@ -40,6 +40,8 @@ Return ONLY one JSON object with this exact top-level structure:
 Requirements:
 - confidence must be between 0 and 1.
 - cite only evidence present in the supplied evidence snapshot.
+- every evidence[].source MUST be exactly one key from evidence_catalog.
+- use one evidence item per source; never combine, rename, paraphrase, or invent source IDs.
 - distinguish Kubernetes readiness/target reachability from application request success.
 - do not claim that Prometheus up=1 means the application serves requests successfully.
 - do not recommend destructive remediation as the first action.
