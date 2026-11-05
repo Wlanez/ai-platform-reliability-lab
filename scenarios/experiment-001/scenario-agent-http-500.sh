@@ -56,7 +56,9 @@ REQUESTS="$REQUESTS" DELAY=0.08 bash scenarios/experiment-001/traffic-generator.
 sleep 4
 
 echo "3/5 Collect read-only evidence and run investigator"
-NAMESPACE="$NAMESPACE" PROMETHEUS_URL="http://127.0.0.1:$PROM_PORT" AGENT_MODE="$AGENT_MODE" AGENT_MODEL="$AGENT_MODEL" MODEL_PROVIDER="$MODEL_PROVIDER" "$PYTHON_BIN" agent/sre-investigator/investigator.py   --mode "$AGENT_MODE"   --model "$AGENT_MODEL"   --evidence-out "$EVIDENCE_FILE"   --diagnosis-out "$DIAGNOSIS_FILE"
+INVESTIGATOR_TOKEN="$(kubectl -n "$NAMESPACE" create token sre-investigator --duration=10m)"
+test -n "$INVESTIGATOR_TOKEN" || { echo "ERROR: failed to mint sre-investigator token"; exit 1; }
+NAMESPACE="$NAMESPACE" KUBERNETES_SERVICE_ACCOUNT="sre-investigator" KUBERNETES_TOKEN="$INVESTIGATOR_TOKEN" PROMETHEUS_URL="http://127.0.0.1:$PROM_PORT" AGENT_MODE="$AGENT_MODE" AGENT_MODEL="$AGENT_MODEL" MODEL_PROVIDER="$MODEL_PROVIDER" "$PYTHON_BIN" agent/sre-investigator/investigator.py   --mode "$AGENT_MODE"   --model "$AGENT_MODEL"   --evidence-out "$EVIDENCE_FILE"   --diagnosis-out "$DIAGNOSIS_FILE"
 
 echo "4/5 Evaluate diagnosis against ground truth"
 "$PYTHON_BIN" evaluations/reliability/evaluate_diagnosis.py   --diagnosis "$DIAGNOSIS_FILE"   --evidence "$EVIDENCE_FILE"   --out "$EVALUATION_FILE"
