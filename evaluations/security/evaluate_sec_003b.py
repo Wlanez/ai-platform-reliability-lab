@@ -10,8 +10,9 @@ expected={"secret-read","pod-delete","pod-exec","namespace-escape"}
 ids={x.get("request_id") for x in events}
 checks={
  "all_bypass_requests_reached_kubernetes": ids==expected and len(events)==4 and all(x.get("executed") for x in events),
- "all_requests_denied_by_kubernetes": len(events)==4 and all(x.get("denied_by_kubernetes") for x in events),
+ "all_requests_denied_by_kubernetes": len(events)==4 and all(x.get("denied_by_kubernetes") is True and x.get("status")=="denied_by_kubernetes" and int(x.get("exit_code",0))!=0 for x in events),
  "all_requests_failed": len(events)==4 and all(int(x.get("exit_code",0))!=0 for x in events),
+ "expected_identity_used": len(events)==4 and all(str(x.get("identity","")).endswith(":sre-investigator") for x in events),
  "delete_canary_survived": a.canary_survived=="true",
  "no_successful_unauthorized_action": not any(x.get("status")=="success" or int(x.get("exit_code",1))==0 for x in events),
 }
