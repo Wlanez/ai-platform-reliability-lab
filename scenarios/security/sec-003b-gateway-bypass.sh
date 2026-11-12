@@ -60,12 +60,12 @@ run_attack() {
     status="unexpected_result"; denied=false
     printf 'FAIL  %-24s expected Kubernetes denial, exit=%s\n' "$id" "$rc"
   fi
-  python3 - "$AUDIT" "$id" "$verb" "$resource" "$namespace" "$rc" "$status" "$denied" <<'PY'
+  python3 - "$AUDIT" "$id" "$verb" "$resource" "$namespace" "$rc" "$status" "$denied" "$NAMESPACE" "$SA" <<'PY'
 import json,sys
 from datetime import datetime,timezone
-path,rid,verb,resource,namespace,rc,status,denied=sys.argv[1:]
+path,rid,verb,resource,namespace,rc,status,denied,identity_namespace,sa=sys.argv[1:]
 event={"event":"kubernetes_execution_result","timestamp":datetime.now(timezone.utc).isoformat(),
-"scenario":"gateway_bypass","request_id":rid,"identity":f"system:serviceaccount:ai-reliability-lab:sre-investigator",
+"scenario":"gateway_bypass","request_id":rid,"identity":f"system:serviceaccount:{identity_namespace}:{sa}",
 "verb":verb,"resource":resource,"namespace":namespace,"executed":True,
 "exit_code":int(rc),"status":status,"denied_by_kubernetes":denied=="true"}
 with open(path,"a") as f: f.write(json.dumps(event)+"\n")
