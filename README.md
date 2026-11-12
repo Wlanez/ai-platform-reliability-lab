@@ -445,4 +445,4 @@ This repository is intended to make those properties testable.
 
 Current milestone: EXP-001, EVAL-002, SEC-001, SEC-002, and SEC-003 pass. The investigator uses a short-lived least-privilege ServiceAccount identity and adversarial requests are denied and audited.
 
-Next milestone: validate SEC-003B defense in depth by deliberately bypassing the gateway and proving Kubernetes independently contains the same adversarial requests.
+SEC-003B is now validated: after deliberately bypassing the gateway, all four forbidden requests reached Kubernetes and were denied by the least-privilege ServiceAccount; the delete canary survived and zero unauthorized actions succeeded. Next milestone: SEC-004 indirect prompt-injection evaluation.
