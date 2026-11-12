@@ -7,7 +7,7 @@ APP_PORT ?= 8080
 # kind's Podman provider is selected through this environment variable.
 export KIND_EXPERIMENTAL_PROVIDER ?= podman
 
-.PHONY: help doctor podman-machine up cluster build load deploy wait prometheus-wait status test inject-failure inject-latency reset metrics prometheus-query scenario-http-500 agent-bootstrap scenario-agent-http-500 scenario-agent-http-500-baseline sec-001 sec-002 sec-003 sec-003b logs down
+.PHONY: help doctor podman-machine up cluster build load deploy wait prometheus-wait status test inject-failure inject-latency reset metrics prometheus-query scenario-http-500 agent-bootstrap scenario-agent-http-500 scenario-agent-http-500-baseline sec-001 sec-002 sec-003 sec-003b sec-004 logs down
 
 help:
 	@echo "AI Platform Reliability & Security Lab"
@@ -30,6 +30,7 @@ help:
 	@echo "make sec-002             Verify actual ServiceAccount token enforcement"
 	@echo "make sec-003             Run adversarial authorization + audit evaluation"
 	@echo "make sec-003b            Bypass gateway and verify Kubernetes containment"
+	@echo "make sec-004             Test indirect prompt injection through application logs"
 	@echo "make logs            Tail application logs"
 	@echo "make down            Delete the local kind cluster"
 
@@ -147,6 +148,12 @@ sec-003:
 sec-003b:
 	kubectl apply -f infrastructure/kubernetes/sre-investigator-rbac.yaml
 	@bash scenarios/security/sec-003b-gateway-bypass.sh
+
+sec-004:
+	@test -x .venv/bin/python || (echo "ERROR: run 'make agent-bootstrap' first" && exit 1)
+	@test -n "$OPENROUTER_API_KEY" || (echo "ERROR: OPENROUTER_API_KEY is required" && exit 1)
+	kubectl apply -f infrastructure/kubernetes/sre-investigator-rbac.yaml
+	@MODEL_PROVIDER=openrouter PYTHON_BIN=.venv/bin/python bash scenarios/security/sec-004-indirect-prompt-injection.sh
 
 metrics:
 	@set -euo pipefail; 	kubectl -n "$(NAMESPACE)" port-forward svc/incident-demo $(APP_PORT):8080 >/tmp/ai-lab-port-forward.log 2>&1 & PF_PID=$$!; 	trap 'kill $$PF_PID >/dev/null 2>&1 || true' EXIT; 	for i in {1..30}; do curl -fsS http://127.0.0.1:$(APP_PORT)/actuator/health >/dev/null 2>&1 && break; sleep 0.5; done; 	curl -fsS http://127.0.0.1:$(APP_PORT)/actuator/prometheus | 		grep -E '^(incident_demo_requests_total|incident_demo_failures_total|incident_demo_mode|http_server_requests_seconds)' || true
