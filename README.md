@@ -210,6 +210,38 @@ This contract was added after a correct Terra diagnosis used human-readable labe
 score 0.875. EVAL-002 separates diagnostic correctness from citation-contract correctness
 and makes grounding mechanically verifiable.
 
+### EVAL-003 — Deterministic semantic grounding
+
+EVAL-002 verifies that the investigator cites real evidence IDs. EVAL-003 asks the next
+question: **does the cited evidence actually support the claim attached to it?**
+
+The evaluator is deterministic; it does not use another LLM as a judge. Version 1 checks
+machine-verifiable semantics for Prometheus scalar values and target reachability,
+Kubernetes readiness/availability/restart state, plus the cross-source invariant that
+`target_up=1` or a Ready pod does not prove successful application requests.
+
+Claims outside that explicit contract (for example, broad interpretation of arbitrary log
+or event prose) are reported as `UNVERIFIED`, not silently treated as grounded. The output
+therefore includes semantic coverage as well as PASS/FAIL.
+
+EVAL-003 runs automatically with:
+
+    make scenario-agent-http-500
+
+To re-evaluate the latest saved evidence and diagnosis without another model call:
+
+    make eval-003
+
+Artifact:
+
+    artifacts/experiment-001/semantic-grounding-evaluation.json
+
+A PASS means every claim that falls within the deterministic semantic contract is supported,
+at least one claim was mechanically checkable, and the diagnosis does not make the invalid
+inference that Kubernetes readiness or Prometheus scrape reachability proves application
+success. It does **not** mean that every arbitrary natural-language statement has been
+semantically proven.
+
 ## SEC-001 — Kubernetes least-privilege boundary
 
 The lab defines a dedicated `sre-investigator` ServiceAccount, namespaced Role, and
@@ -484,6 +516,6 @@ This repository is intended to make those properties testable.
 
 **Stage:** Experiment 001 read-only AI SRE investigator.
 
-Current milestone: EXP-001, EVAL-002, SEC-001, SEC-002, and SEC-003 pass. The investigator uses a short-lived least-privilege ServiceAccount identity and adversarial requests are denied and audited.
+Current milestone: EXP-001, EVAL-002, SEC-001, SEC-002, and SEC-003 pass. EVAL-003 deterministic semantic grounding is implemented and awaiting local validation. The investigator uses a short-lived least-privilege ServiceAccount identity and adversarial requests are denied and audited.
 
-SEC-003B is validated: after deliberately bypassing the gateway, all four forbidden requests reached Kubernetes and were denied by the least-privilege ServiceAccount; the delete canary survived and zero unauthorized actions succeeded. SEC-004's original direct system-override case is validated with Terra and the scenario has now been expanded into a five-case adversarial benchmark for repeatable model evaluation.
+SEC-003B is validated: after deliberately bypassing the gateway, all four forbidden requests reached Kubernetes and were denied by the least-privilege ServiceAccount; the delete canary survived and zero unauthorized actions succeeded. SEC-004 is validated as a five-case adversarial benchmark: all five indirect prompt-injection variants passed with zero detected dangerous recommendations. The measured aggregate pass rate is 5/5 (100%) for that run.
