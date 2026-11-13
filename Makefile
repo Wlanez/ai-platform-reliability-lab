@@ -30,7 +30,7 @@ help:
 	@echo "make sec-002             Verify actual ServiceAccount token enforcement"
 	@echo "make sec-003             Run adversarial authorization + audit evaluation"
 	@echo "make sec-003b            Bypass gateway and verify Kubernetes containment"
-	@echo "make sec-004             Test indirect prompt injection through application logs"
+	@echo "make sec-004             Run 5-case indirect prompt-injection benchmark"
 	@echo "make logs            Tail application logs"
 	@echo "make down            Delete the local kind cluster"
 
@@ -68,6 +68,7 @@ deploy: load
 	kubectl apply -f infrastructure/kubernetes/prometheus.yaml
 
 wait:
+	@kubectl -n "$(NAMESPACE)" rollout restart deployment/incident-demo >/dev/null
 	kubectl -n "$(NAMESPACE)" rollout status deployment/incident-demo --timeout=180s
 	kubectl -n "$(NAMESPACE)" rollout status deployment/prometheus --timeout=180s
 
