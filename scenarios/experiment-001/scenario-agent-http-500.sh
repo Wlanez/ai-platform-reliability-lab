@@ -14,6 +14,7 @@ ARTIFACT_DIR="${ARTIFACT_DIR:-artifacts/experiment-001}"
 EVIDENCE_FILE="$ARTIFACT_DIR/agent-evidence.json"
 DIAGNOSIS_FILE="$ARTIFACT_DIR/agent-diagnosis.json"
 EVALUATION_FILE="$ARTIFACT_DIR/agent-evaluation.json"
+SEMANTIC_EVALUATION_FILE="$ARTIFACT_DIR/semantic-grounding-evaluation.json"
 
 mkdir -p "$ARTIFACT_DIR"
 APP_PF_PID=""
@@ -46,26 +47,33 @@ for i in {1..40}; do
 done
 
 echo "EXP-001 agent diagnosis / HTTP 500"
-echo "1/5 Reset and inject incident"
+echo "1/6 Reset and inject incident"
 curl -fsS -X POST "http://127.0.0.1:$APP_PORT/admin/failure?mode=healthy" >/dev/null
 sleep 2
 curl -fsS -X POST "http://127.0.0.1:$APP_PORT/admin/failure?mode=errors" >/dev/null
 
-echo "2/5 Generate incident traffic"
+echo "2/6 Generate incident traffic"
 REQUESTS="$REQUESTS" DELAY=0.08 bash scenarios/experiment-001/traffic-generator.sh   "http://127.0.0.1:$APP_PORT/api/work"
 sleep 4
 
-echo "3/5 Collect read-only evidence and run investigator"
+echo "3/6 Collect read-only evidence and run investigator"
 INVESTIGATOR_TOKEN="$(kubectl -n "$NAMESPACE" create token sre-investigator --duration=10m)"
 test -n "$INVESTIGATOR_TOKEN" || { echo "ERROR: failed to mint sre-investigator token"; exit 1; }
 NAMESPACE="$NAMESPACE" KUBERNETES_SERVICE_ACCOUNT="sre-investigator" KUBERNETES_TOKEN="$INVESTIGATOR_TOKEN" PROMETHEUS_URL="http://127.0.0.1:$PROM_PORT" AGENT_MODE="$AGENT_MODE" AGENT_MODEL="$AGENT_MODEL" MODEL_PROVIDER="$MODEL_PROVIDER" "$PYTHON_BIN" agent/sre-investigator/investigator.py   --mode "$AGENT_MODE"   --model "$AGENT_MODEL"   --evidence-out "$EVIDENCE_FILE"   --diagnosis-out "$DIAGNOSIS_FILE"
 
-echo "4/5 Evaluate diagnosis against ground truth"
+echo "4/6 Evaluate diagnosis against ground truth"
 "$PYTHON_BIN" evaluations/reliability/evaluate_diagnosis.py   --diagnosis "$DIAGNOSIS_FILE"   --evidence "$EVIDENCE_FILE"   --out "$EVALUATION_FILE"
 
-echo "5/5 Restore healthy mode"
+echo "5/6 Evaluate semantic grounding (EVAL-003)"
+"$PYTHON_BIN" evaluations/reliability/evaluate_semantic_grounding.py \
+  --diagnosis "$DIAGNOSIS_FILE" \
+  --evidence "$EVIDENCE_FILE" \
+  --out "$SEMANTIC_EVALUATION_FILE"
+
+echo "6/6 Restore healthy mode"
 curl -fsS -X POST "http://127.0.0.1:$APP_PORT/admin/failure?mode=healthy" >/dev/null
 
 echo "Evidence:   $EVIDENCE_FILE"
 echo "Diagnosis:  $DIAGNOSIS_FILE"
 echo "Evaluation: $EVALUATION_FILE"
+echo "EVAL-003:   $SEMANTIC_EVALUATION_FILE"
