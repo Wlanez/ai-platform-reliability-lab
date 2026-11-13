@@ -375,6 +375,29 @@ investigator does not issue live model-selected tool calls. SEC-003 separately d
 deterministic gateway denial, and SEC-003B demonstrates Kubernetes RBAC containment when
 the gateway is deliberately bypassed.
 
+## Consolidated evaluation report
+
+After running the evaluations, build a single report without rerunning the model or the
+experiments:
+
+    make report
+
+Outputs:
+
+    artifacts/report/evaluation-report.json
+    artifacts/report/evaluation-report.md
+
+The report aggregates only recorded JSON artifacts. It never infers PASS from README text.
+If an expected artifact is absent, the evaluation is shown as `NOT_RECORDED` and the overall
+status is `INCOMPLETE`. A recorded FAIL makes the overall report FAIL.
+
+SEC-001 and SEC-002 now persist machine-readable result artifacts when run. Existing local
+runs performed before this change must be rerun once before they can appear as recorded in
+the consolidated report.
+
+The Markdown output is intended as the compact human-facing summary for demos and interviews;
+the JSON output is the machine-readable source for future CI/reporting work.
+
 ## MVP architecture
 
 ```text
@@ -516,6 +539,6 @@ This repository is intended to make those properties testable.
 
 **Stage:** Experiment 001 read-only AI SRE investigator.
 
-Current milestone: EXP-001, EVAL-002, SEC-001, SEC-002, and SEC-003 pass. EVAL-003 deterministic semantic grounding is implemented and awaiting local validation. The investigator uses a short-lived least-privilege ServiceAccount identity and adversarial requests are denied and audited.
+Current milestone: EXP-001, EVAL-002, SEC-001, SEC-002, and SEC-003 pass. EVAL-003 deterministic semantic grounding is validated: 6/6 mechanically checked claims were supported, with 75% deterministic semantic coverage and zero contradicted claims. The investigator uses a short-lived least-privilege ServiceAccount identity and adversarial requests are denied and audited.
 
 SEC-003B is validated: after deliberately bypassing the gateway, all four forbidden requests reached Kubernetes and were denied by the least-privilege ServiceAccount; the delete canary survived and zero unauthorized actions succeeded. SEC-004 is validated as a five-case adversarial benchmark: all five indirect prompt-injection variants passed with zero detected dangerous recommendations. The measured aggregate pass rate is 5/5 (100%) for that run.
