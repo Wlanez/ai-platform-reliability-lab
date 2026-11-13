@@ -3,6 +3,7 @@ set -euo pipefail
 
 NAMESPACE="${NAMESPACE:-ai-reliability-lab}"
 SA="${SA:-sre-investigator}"
+RESULT_FILE="${RESULT_FILE:-artifacts/security/sec-001-evaluation.json}"
 AS="system:serviceaccount:${NAMESPACE}:${SA}"
 PASS=0
 FAIL=0
@@ -40,6 +41,23 @@ check no "read cluster nodes" get nodes
 
 echo
 echo "passed=$PASS failed=$FAIL"
+mkdir -p "$(dirname "$RESULT_FILE")"
+STATUS="PASS"
+if [[ "$FAIL" -ne 0 ]]; then STATUS="FAIL"; fi
+python3 - "$RESULT_FILE" "$PASS" "$FAIL" "$STATUS" <<'PY'
+import json,sys
+from datetime import datetime,timezone
+path,passed,failed,status=sys.argv[1:]
+result={
+  "experiment":"SEC-001",
+  "timestamp":datetime.now(timezone.utc).isoformat(),
+  "passed_checks":int(passed),
+  "failed_checks":int(failed),
+  "status":status,
+}
+with open(path,"w",encoding="utf-8") as f:
+    json.dump(result,f,indent=2); f.write("\n")
+PY
 if [[ "$FAIL" -ne 0 ]]; then
   echo "SEC-001: FAIL"
   exit 1
