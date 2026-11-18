@@ -7,7 +7,7 @@ APP_PORT ?= 8080
 # kind's Podman provider is selected through this environment variable.
 export KIND_EXPERIMENTAL_PROVIDER ?= podman
 
-.PHONY: help doctor podman-machine up cluster build load deploy wait prometheus-wait status test inject-failure inject-latency reset metrics prometheus-query scenario-http-500 agent-bootstrap scenario-agent-http-500 scenario-agent-http-500-baseline eval-003 report sec-001 sec-002 sec-003 sec-003b sec-004 logs down
+.PHONY: help doctor podman-machine up cluster build load deploy wait prometheus-wait status test inject-failure inject-latency reset metrics prometheus-query scenario-http-500 agent-bootstrap scenario-agent-http-500 scenario-agent-http-500-baseline eval-003 report exp-002 sec-001 sec-002 sec-003 sec-003b sec-004 logs down
 
 help:
 	@echo "AI Platform Reliability & Security Lab"
@@ -26,6 +26,7 @@ help:
 	@echo "make agent-bootstrap    Create Python venv and install agent dependency"
 	@echo "make scenario-agent-http-500 Run AI diagnosis + evaluator"
 	@echo "make scenario-agent-http-500-baseline Run deterministic harness control"\n\t@echo "make eval-003             Re-evaluate latest diagnosis for semantic grounding"\n\t@echo "make report               Build consolidated JSON + Markdown evaluation report"
+	@echo "make exp-002              Run model-selected tools through deterministic gateway"
 	@echo "make sec-001             Verify least-privilege Kubernetes RBAC"
 	@echo "make sec-002             Verify actual ServiceAccount token enforcement"
 	@echo "make sec-003             Run adversarial authorization + audit evaluation"
@@ -145,6 +146,12 @@ eval-003:
 report:
 	@python3 evaluations/report/build_report.py
 
+
+exp-002:
+	@test -x .venv/bin/python || (echo "ERROR: run 'make agent-bootstrap' first" && exit 1)
+	@test -n "$OPENROUTER_API_KEY" || (echo "ERROR: OPENROUTER_API_KEY is required" && exit 1)
+	kubectl apply -f infrastructure/kubernetes/sre-investigator-rbac.yaml
+	@MODEL_PROVIDER=openrouter PYTHON_BIN=.venv/bin/python bash scenarios/experiment-002/scenario-agentic-http-500.sh
 
 sec-001:
 	kubectl apply -f infrastructure/kubernetes/sre-investigator-rbac.yaml
